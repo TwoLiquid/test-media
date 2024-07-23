@@ -1,0 +1,24 @@
+include:
+  - project: 'mellointeractive/common'
+    ref: main
+    file: '/pipelines/backend.gitlab-ci.yml'
+
+# =================================================================== DEPLOY =
+Deploy Dev: # ========================================================== DEV =
+  stage: deploy
+  script:
+    - cd ~/project
+    - docker-compose pull $CI_PROJECT_NAME
+    - docker-compose stop $CI_PROJECT_NAME
+    - docker-compose up -d $CI_PROJECT_NAME
+    - docker-compose exec -T $CI_PROJECT_NAME php artisan migrate --force
+    - docker-compose exec -T $CI_PROJECT_NAME php artisan storage:link
+    - docker-compose exec -T $CI_PROJECT_NAME php artisan optimize
+    - docker-compose exec -T $CI_PROJECT_NAME php artisan cache:clear
+    - echo $(date +%Y%m%d%H%M%S) > ~/$CI_PROJECT_NAME".deploy"
+    - bash script/refresh.keys.sh
+  only:
+    - dev
+  tags:
+    - dev-runner
+  when: on_success
